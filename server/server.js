@@ -12,11 +12,12 @@ var app = express();
 
 app.use(bodyParser.json());
 
-app.post('/todos', (req, res) => {
+app.post('/todos', authenticate, (req, res) => {
    var todo = new Todo({
        text: req.body.text,
        completed: req.body.completed,
-       completedAt: req.body.completedAt
+       completedAt: req.body.completedAt,
+       _creator: req.user._id
    });
 
    todo.save().then((doc)=> {
@@ -25,6 +26,16 @@ app.post('/todos', (req, res) => {
    }, (e) => {
       res.status(400).send(e);
    });
+});
+
+app.get('/todos', authenticate, (req, res) => {
+    Todo.find({
+        _creator: req.user._id
+    }).then((todos) => {
+      res.send({todos});
+    }, (e) => {
+      res.status(400).send(e);
+    });
 });
 
 app.post('/users', (req, res) => {
@@ -64,21 +75,17 @@ app.delete('/users/logout', authenticate , (req, res) => {
     });
 });
 
-app.get('/todos', (req, res) => {
-  Todo.find().then((todos) => {
-    res.send({todos});
-  }, (e) => {
-    res.status(400).send(e);
-  });
-});
-
 app.get('/todos/:id', (req, res) => {
     var id = req.params.id;
     if(!ObjectID.isValid(id)) {
        return res.status(404).send();
     }
 
-    Todo.findById(id).then((doc) => {
+    Todo.findOne({
+        _id: id,
+        _creator: user._id
+
+    }).then((doc) => {
         if (!doc) {
             return res.status(404).send();
         }
